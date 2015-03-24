@@ -20,7 +20,6 @@ rankhospital <- function(state, outcome, num = "best") {
                 stop("invalid outcome")
         }
 
-
         if(outcome==ocList[1]) {
                 ocCol <- 11
         } else if(outcome==ocList[2]) {
@@ -42,7 +41,36 @@ rankhospital <- function(state, outcome, num = "best") {
         data$dRate <- as.numeric(data$dRate)
         ## subset on state
         data <- data[data$state == state,]
+
+
+        ## check num
+        ## Set num to 1 for 'best' and to dim(data)[[1]] for worst
+        ## stop if num (rank) not whole number
+        ## if whole number coerce to integer
+        ## stop if neither of above
+        if(num == "best") {
+                num <- 1
+        } else if(num=="worst") {
+                num <- dim(data)[[1]]
+        } else if(is.numeric(num)) {
+                if(abs(num - round(num)) < .Machine$double.eps^0.5) {
+                        num <- as.integer(num)
+                } else {
+                        stop("Rank must be integer.")
+                }
+        } else {
+                stop("Rank can only be 'best', 'worst' or integer.")
+        }
+
+        ## check that rank asked for is greater or equal to worst
+        #if(num > dim(data)[[1]]) {
+        #        stop("Rank asked for is lower than 'worst'.")
+        #}
+
         ## Return hospital name in that state with lowest 30-day death
         ## rate
-        sort(data[data$dRate == min(as.numeric(data$dRate)), 1])[1]
+        data <- data[order(data$dRate,data$hn),]
+        ## next line for help with debug
+        ## data$rank <- seq(1,length(data$hn))
+        data[num,1]
 }
