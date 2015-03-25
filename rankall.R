@@ -37,63 +37,56 @@ rankall <- function(outcome, num = "best") {
         ## dRate is character. Must be converted to numeric else funny things happen in the following
         data$dRate <- as.numeric(data$dRate)
 
-
-
-        print(num)
-
-        ## check that rank asked for is greater or equal to worst
-        #if(num > dim(data)[[1]]) {
-        #        stop("Rank asked for is lower than 'worst'.")
-        #}
-
-        ## Return hospital name in that state with lowest 30-day death
-        ## rate
         data <- data[order(data$dRate,data$hn),]
         ## next line for help with debug
         ## data$rank <- seq(1,length(data$hn))
         ## split along state, returns list
         data <- split(data,data$state)
 
+        ## Find numobs for every state
+        numobs <- unlist(lapply(lapply(data,"[[",3),length))
+        ## Find cumsum of numobs
+        numobsCum <- cumsum(numobs)
+
         ## check num, This have to be done after the split of data because of worst
         ## Set num to 1 for 'best' and to dim(data)[[1]] for worst
         ## stop if num (rank) not whole number
         ## if whole number coerce to integer
         ## stop if neither of above
+        ## num is really rank
         if(num == "best") {
+                ## num is a constant
                 num <- 1
         } else if(num=="worst") {
-                ## Get num of obs for each state. Set to worst for each state
-                ## data is now a list of dataframes, each with 3 var, but different length
-                ## the inne lapply picks the 3 column in the dataframes (dRate). The outer gets the length
+        ## data is now a list of dataframes. The dataframes differ in length (different number
+        ## of hospitals in different sates). num is now a named vector
                 num <- unlist(lapply(lapply(data,"[[",3),length))
-                numc <- cumsum(num)
-                #Flatten hospital names
-                res <- unlist(lapply(data,"[[",1))
-                #pick out the worst from every state
-                res <- res[unname(numc)]
-                #make nice dataframe to return
-                res <- as.data.frame(res)
-                res$state <- substr(rownames(res),1,2)
-                rownames(res) <- res$state
-                names(res)[1] <- "hospital"
-                return(res)
         } else if(is.numeric(num)) {
                 if(abs(num - round(num)) < .Machine$double.eps^0.5) {
                         num <- as.integer(num)
-                } else {
+                        if(num <= 0) {
+                                stop("Only positive rank allowed.")
+                        }
+                        }
+                else {
                         stop("Rank must be integer.")
                 }
         } else {
                 stop("Rank can only be 'best', 'worst' or integer.")
         }
+        # only positive rank has meaning
 
-
-        ## use the [ function to pick element, firste argument passed is rownumber, second is
-        ## variable (column) in dataframe in list
-        res <- lapply(data,"[",num,1)
-        ## make into dataframe
-        res <- as.data.frame(t(data.frame(res)))
-        names(res) <- "hospital"
-        res$state <- rownames(res)
+        #Flatten hospital names
+        res <- unlist(lapply(data,"[[",1))
+        ## index of the one we want. pmax adjust for cases where rank (i.e. num) is greater than number of
+        ## hospitals in state
+        ind <-  numobsCum - pmax((numobs-num),0)
+        #pick out the ones we want. If rank > num hospitals we give NA
+        res <- ifelse(pmax((numobs-num),-1) < 0, NA, res[ind])
+        #make nice dataframe to return
+        res <- as.data.frame(res)
+        res$state <- substr(rownames(res),1,2)
+        rownames(res) <- res$state
+        names(res)[1] <- "hospital"
         res
 }
