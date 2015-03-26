@@ -14,8 +14,8 @@ best <- function(state, outcome) {
                 stop("invalid state")
         }
         ocList <- c("heart attack", "heart failure", "pneumonia")
-        outcome <- tolower(outcome)
         ## Allow Uppercase and mixed case for outcome
+        outcome <- tolower(outcome)
         if(! outcome %in% ocList) {
                 stop("invalid outcome")
         }
